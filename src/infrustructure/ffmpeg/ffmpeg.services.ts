@@ -5,19 +5,12 @@ export class FfmpegService {
   constructor(private readonly processRunner: ProcessRunner) {}
 
   async getVersion(): Promise<string | null> {
-    try {
-      const result = await this.processRunner.run('ffmpeg', ['-version']);
+    const result = await this.processRunner.run('ffmpeg', ['-version']);
 
-      if (!result.stdout || !result.success) {
-        return null;
-      }
-      return this.getNormalizedVersion(result.stdout) ?? '';
-    } catch (error) {
-      if (error instanceof Error) {
-        console.log(`Error Happened while opening ${error.message}`);
-      }
+    if (!result.stdout || !result.success) {
       return null;
     }
+    return this.getNormalizedVersion(result.stdout) ?? '';
   }
   async isAvailable(): Promise<boolean> {
     const isAvailable = await this.getVersion();
@@ -25,36 +18,22 @@ export class FfmpegService {
   }
 
   async check(): Promise<DependencyStatus> {
-    try {
-      const result = await this.processRunner.run('ffmpeg', ['-version']);
+    const result = await this.processRunner.run('ffmpeg', ['-version']);
 
-      if (!result.success || !result.stdout) {
-        return {
-          name: 'ffmpeg',
-          version: null,
-          isAvailable: false,
-          error: result.stderr.trim(),
-        };
-      }
-
+    if (!result.success || !result.stdout) {
       return {
         name: 'ffmpeg',
-        version: this.getNormalizedVersion(result.stdout.trim()),
-        isAvailable: true,
-      };
-    } catch (error) {
-      let errorMessage = '';
-      if (error instanceof Error) {
-        console.log(`[Error]: Error happened while checking [FFMPEG] ${error.message}`);
-        errorMessage = error.message;
-      }
-      return {
-        name: '',
         version: null,
         isAvailable: false,
-        error: errorMessage,
+        error: result.stderr.trim(),
       };
     }
+
+    return {
+      name: 'ffmpeg',
+      version: this.getNormalizedVersion(result.stdout.trim()),
+      isAvailable: true,
+    };
   }
 
   private getNormalizedVersion(version: string): string | null {

@@ -9,30 +9,14 @@ export class DependencyChecker {
   ) {}
 
   async checkAll(): Promise<DependencyCheckerStatus> {
-    let dependencyCheckerResult: DependencyCheckerStatus;
-    let isReady: boolean = true;
+    const result = await Promise.all([this.ytDlpService.check(), this.ffmpegService.check()]);
+    const isReady = result.every(
+      (dependencyResult) => dependencyResult.isAvailable && Boolean(dependencyResult.version),
+    );
 
-    try {
-      const result = await Promise.all([this.ytDlpService.check(), this.ffmpegService.check()]);
-      result.forEach((dependencyResult) => {
-        if (!dependencyResult.isAvailable || !dependencyResult.version) {
-          isReady = false;
-        }
-      });
-
-      dependencyCheckerResult = {
-        ready: isReady,
-        dependencies: result,
-      };
-      return dependencyCheckerResult;
-    } catch (error) {
-      if (error instanceof Error) {
-        console.log(`[Error]: ${error.message}`);
-      }
-      return {
-        ready: false,
-        dependencies: [],
-      };
-    }
+    return {
+      ready: isReady,
+      dependencies: result,
+    };
   }
 }
