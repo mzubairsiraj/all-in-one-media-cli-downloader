@@ -1,12 +1,12 @@
+import { DependencyStatus } from '../../types/dependency.types.js';
 import ProcessRunner from '../process-runner.js';
-// import type {dependencyStatus} from "../../types/dependency.types.js"
 
 export class FfmpegService {
   constructor(private readonly processRunner: ProcessRunner) {}
 
   async getVersion(): Promise<string | null> {
     try {
-      let result = await this.processRunner.run('ffmpeg', ['-version']);
+      const result = await this.processRunner.run('ffmpeg', ['-version']);
 
       if (!result.stdout || !result.success) {
         return null;
@@ -19,11 +19,46 @@ export class FfmpegService {
       return null;
     }
   }
+  async isAvailable(): Promise<boolean> {
+    const isAvailable = await this.getVersion();
+    return isAvailable !== null;
+  }
+
+  async check(): Promise<DependencyStatus> {
+    try {
+      const result = await this.processRunner.run('ffmpeg', ['-version']);
+
+      if (!result.success || !result.stdout) {
+        return {
+          name: 'ffmpeg',
+          version: null,
+          isAvailable: false,
+          error: result.stderr.trim(),
+        };
+      }
+
+      return {
+        name: 'ffmpeg',
+        version: this.getNormalizedVersion(result.stdout.trim()),
+        isAvailable: true,
+      };
+    } catch (error) {
+      let errorMessage = '';
+      if (error instanceof Error) {
+        console.log(`[Error]: Error happened while checking [FFMPEG] ${error.message}`);
+        errorMessage = error.message;
+      }
+      return {
+        name: '',
+        version: null,
+        isAvailable: false,
+        error: errorMessage,
+      };
+    }
+  }
 
   private getNormalizedVersion(version: string): string | null {
-    if (typeof version === 'string') {
-      return version.trim().split(' ')[2]?.split('-')[0] as string;
-    }
-    return null;
+    const match = /^ffmpeg\s+version\s+([^\s-]+)/im.exec(version);
+    return match?.[1] ?? null;
   }
 }
